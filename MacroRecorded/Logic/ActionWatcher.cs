@@ -51,7 +51,6 @@ public class ActionWatcher : IDisposable
             unsafe
             {
                 _onUseActionHook = Hook<OnUseActionDelegate>.FromAddress(sigScanner.ScanText(ActionManager.Addresses.UseAction.String), OnUseAction);
-                _onUseActionHook.Enable();
             }
         }
         catch (Exception e)
@@ -64,7 +63,19 @@ public class ActionWatcher : IDisposable
 
     private void Update(Framework framework)
     {
-        IsCrafting = _condition[ConditionFlag.Crafting];
+        //The hook should be enabled only when the user is crafting, otherwise it'll interfere with users actions
+        if (IsCrafting && !_condition[ConditionFlag.Crafting])
+        {
+            //Crafting ended
+            IsCrafting = false;
+            _onUseActionHook.Disable();
+        }
+        if (_condition[ConditionFlag.Crafting] && _configuration.RecordStarted)
+        {
+            //Crafting started
+            IsCrafting = true;
+            _onUseActionHook.Enable();
+        }
     }
 
     public void ResetRecording()
@@ -93,7 +104,6 @@ public class ActionWatcher : IDisposable
         }
 
         var now = ImGui.GetTime();
-
         var item = new CraftAction(action.Name, actionId, action.Icon, now);
         _craftActions.Add(item);
     }
@@ -109,7 +119,6 @@ public class ActionWatcher : IDisposable
         }
 
         var now = ImGui.GetTime();
-
         var item = new CraftAction(action.Name, actionId, action.Icon, now);
         _craftActions.Add(item);
     }
