@@ -5,7 +5,6 @@ using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
-using Dalamud.Interface;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using MacroRecorded.Services;
@@ -36,7 +35,6 @@ public class Plugin : IDalamudPlugin
         PluginInterface = pluginInterface;
         CommandManager = commandManager;
         var configuration = (Configuration)PluginInterface.GetPluginConfig() ?? new Configuration();
-        configuration.Initialize(pluginInterface);
         _windowService = new WindowService(new(WindowConstants.WindowSystemNamespace));
         _pluginServiceFactory = new PluginServiceFactory().RegisterService(pluginInterface)
                                                           .RegisterService(_windowService)
@@ -52,8 +50,7 @@ public class Plugin : IDalamudPlugin
         PluginModule.Register(_pluginServiceFactory);
 
         var mainWindow = new PluginUi(_pluginServiceFactory.Create<ActionWatcher>(),
-                                      _pluginServiceFactory.Create<Configuration>(),
-                                      _pluginServiceFactory.Create<DrawHelper>());
+                                      _pluginServiceFactory.Create<Configuration>());
         _windowService.RegisterWindow(mainWindow, WindowConstants.MainWindowName);
 
         CommandManager.AddHandler(PluginConstants.CommandSlash, new CommandInfo(OnCommand)
@@ -72,7 +69,7 @@ public class Plugin : IDalamudPlugin
     private void OnCommand(string command, string args)
     {
         var pluginWindow = _windowService.GetWindow(WindowConstants.MainWindowName);
-        if (pluginWindow is not PluginUi window) return;
+        if (pluginWindow is not PluginUi) return;
         pluginWindow.IsOpen = true;
     }
 

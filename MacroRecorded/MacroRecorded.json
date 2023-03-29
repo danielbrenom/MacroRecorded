@@ -1,13 +1,13 @@
 {
   "Author": "Sylf",
-  "Name": "A Macro Recorded",
-  "Punchline": "Want to record a crafting rotation and export it as a macro, look no further!",
+  "Name": "Macro Recorded",
+  "Punchline": "Want to record a crafting rotation and export it as a macro? Look no further!",
   "Description": "Records a crafting rotation you start and provides a way to export it to a macro so you can reutilize it.",
   "InternalName": "macroRecorded",
   "ApplicableVersion": "any",
-  "Changelog": "- Internal testing version",
-  "AssemblyVersion": "0.0.1",
-  "RepoUrl": "https://github.com/danielbrenom/MonsterLootHunter",
+  "Changelog": "- Testing version",
+  "AssemblyVersion": "0.0.0.1",
+  "RepoUrl": "https://github.com/danielbrenom/MacroRecorded",
   "DalamudApiLevel": 8,
   "Tags": [
     "macro",

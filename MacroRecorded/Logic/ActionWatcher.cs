@@ -36,14 +36,13 @@ public class ActionWatcher : IDisposable
     private readonly ExcelSheet<LuminaCraftAction> _craftSheet;
     private const int MaxActionCount = 50;
     private List<CraftAction> _craftActions = new(MaxActionCount);
-    public IReadOnlyCollection<CraftAction> CraftActions => _craftActions.AsReadOnly();
+    public IReadOnlyList<CraftAction> CraftActions => _craftActions.AsReadOnly();
 
     public ActionWatcher(DataManager dataManager, Framework framework, SigScanner sigScanner, ClientState clientState, Configuration configuration, Condition condition)
     {
         _actionSheet = dataManager.GetExcelSheet<LuminaAction>();
         _craftSheet = dataManager.GetExcelSheet<LuminaCraftAction>();
         _framework = framework;
-        // _sigScanner = sigScanner;
         _clientState = clientState;
         _condition = condition;
         _configuration = configuration;
@@ -65,32 +64,29 @@ public class ActionWatcher : IDisposable
 
     private void Update(Framework framework)
     {
-        if (IsCrafting && !_condition[ConditionFlag.Crafting])
-        {
-            //Crafting ended
-            _craftActions = new List<CraftAction>();
-        }
-
         IsCrafting = _condition[ConditionFlag.Crafting];
+    }
+
+    public void ResetRecording()
+    {
+        _craftActions = new List<CraftAction>();
     }
 
     private unsafe void OnUseAction(ActionManager* manager, ActionType actionType, uint actionId, long targetId, uint a4, uint a5, uint a6, void* a7)
     {
         _onUseActionHook?.Original(manager, actionType, actionId, targetId, a4, a5, a6, a7);
         var player = _clientState.LocalPlayer;
-        if (player == null || !IsCrafting)
-            // if (player == null || sourceId != player.ObjectId || !IsCrafting || !_configuration.RecordCrafting)
+        if (player == null || !IsCrafting || !_configuration.RecordStarted)
             return;
-        AddItem(actionId);
+        AddSpellAction(actionId);
         AddCraftAction(actionId);
     }
 
-    private void AddItem(uint actionId)
+    private void AddSpellAction(uint actionId)
     {
         var action = _actionSheet?.GetRow(actionId);
         if (action == null) return;
 
-        // only cache the last kMaxItemCount items
         if (_craftActions.Count >= MaxActionCount)
         {
             _craftActions.RemoveAt(0);
@@ -107,7 +103,6 @@ public class ActionWatcher : IDisposable
         var action = _craftSheet?.GetRow(actionId);
         if (action == null) return;
 
-        // only cache the last kMaxItemCount items
         if (_craftActions.Count >= MaxActionCount)
         {
             _craftActions.RemoveAt(0);

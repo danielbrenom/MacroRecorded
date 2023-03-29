@@ -1,6 +1,9 @@
-﻿namespace MacroRecorded.Data;
+﻿using System;
+using MacroRecorded.Utils;
 
-public class CraftAction
+namespace MacroRecorded.Data;
+
+public class CraftAction 
 {
     public string ActionName { get; }
     public uint ActionId { get; }
@@ -13,5 +16,12 @@ public class CraftAction
         ActionId = actionId;
         IconId = iconId;
         Time = time;
+    }
+
+    public string ToMacroAction(bool isLast)
+    {
+        var format = ActionName.Contains(' ') ? PluginConstants.MultiWordMacroFormat : PluginConstants.MacroFormat;
+        var wait = isLast ? string.Empty : " <wait.3>";
+        return string.Format(format, ActionName, wait);
     }
 }

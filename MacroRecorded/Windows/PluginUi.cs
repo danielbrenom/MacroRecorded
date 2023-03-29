@@ -1,7 +1,10 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
+using MacroRecorded.Data;
 using MacroRecorded.Logic;
 using MacroRecorded.Utils;
 
@@ -11,86 +14,127 @@ public class PluginUi : Window
 {
     private readonly ActionWatcher _actionWatcher;
     private readonly Configuration _configuration;
-    private readonly DrawHelper _drawHelper;
     private ImGuiWindowFlags _flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
     private readonly float _scale;
+    private Vector2 _itemTextSize;
 
-    public PluginUi(ActionWatcher actionWatcher, Configuration configuration, DrawHelper drawHelper) : base(WindowConstants.MainWindowName)
+    public PluginUi(ActionWatcher actionWatcher, Configuration configuration) : base(WindowConstants.MainWindowName)
     {
         Flags = _flags;
         _actionWatcher = actionWatcher;
         _configuration = configuration;
-        _drawHelper = drawHelper;
 
         _scale = ImGui.GetIO().FontGlobalScale;
+        var sizeAnchor = new Vector2(350, 300);
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(800, 600) * _scale,
-            MaximumSize = new Vector2(800, 600) * _scale * 1.5f
+            MinimumSize = sizeAnchor * _scale,
+            MaximumSize = sizeAnchor * _scale * 1.5f
         };
         SizeCondition = ImGuiCond.FirstUseEver;
     }
 
     public override void Draw()
     {
-        ImGui.Text("Test With OnAction");
-        
-        // DrawGrid();
-
+        _itemTextSize = ImGui.CalcTextSize(string.Empty);
         var actionsList = _actionWatcher.CraftActions;
-        if (actionsList is null) return;
-        
-        var drawList = ImGui.GetWindowDrawList();
-        var pos = ImGui.GetWindowPos();
-        var width = ImGui.GetWindowWidth();
-        var height = ImGui.GetWindowHeight();
-        var now = ImGui.GetTime();
-        var actionsLimit = _configuration.CraftingActionsLimit;
 
-        var regularSize = new Vector2(_configuration.ActionIconSize);
-        
+        #region Recorder Controls
+
+        ImGui.BeginChild("recording_controls", new Vector2(150, 80) * _scale, true, ImGuiWindowFlags.NoScrollbar);
+        ImGui.SetNextItemWidth(ImGui.GetIO().FontGlobalScale - ImGui.GetStyle().ItemSpacing.X);
+        ImGui.Text("Recorder Controls");
+        ImGui.Separator();
+        ImGui.BeginGroup();
+        ImGui.PushFont(UiBuilder.IconFont);
+
+        if (_configuration.RecordStarted) ImGui.BeginDisabled();
+        if (ImGui.Button($"{(char)FontAwesomeIcon.Play}##startRec", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
+            _configuration.RecordStarted = true;
+
+        if (_configuration.RecordStarted) ImGui.EndDisabled();
+
+        ImGui.SameLine();
+
+        if (!_configuration.RecordStarted) ImGui.BeginDisabled();
+        if (ImGui.Button($"{(char)FontAwesomeIcon.Stop}##stopRec", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
+            _configuration.RecordStarted = false;
+        if (!_configuration.RecordStarted) ImGui.EndDisabled();
+
+        ImGui.SameLine();
+
+        if (!actionsList.Any() || _configuration.RecordStarted) ImGui.BeginDisabled();
+        if (ImGui.Button($"{(char)FontAwesomeIcon.Trash}##clearRec", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
+            _actionWatcher.ResetRecording();
+        ImGui.PopFont();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Clear recording");
+
+        if (!actionsList.Any() || _configuration.RecordStarted) ImGui.EndDisabled();
+
+        ImGui.EndGroup();
+
+        if (_configuration.RecordStarted)
+        {
+            ImGui.Text("Recording...");
+        }
+
+        ImGui.EndChild();
+
+        #endregion
+
+        #region Macro Controls
+
+        GenerateMacroControls(actionsList);
+
+        #endregion
+
+        ImGui.BeginChild("macro_recorded_area", new Vector2(0, 0) * _scale, true, ImGuiWindowFlags.NoScrollbar);
+        ImGui.Text("Recorded Macro");
+        ImGui.Separator();
+        ImGui.BeginChild("macro_recoding_text", new Vector2(0, 0), false);
         foreach (var action in actionsList)
         {
-            //position
-            var posX = GetPositionX(Math.Abs(now - action.Time), actionsLimit, width);
-            var posY = height / 2f;
-            
-            //size
-            var position = new Vector2(pos.X + posX - regularSize.X / 2f, pos.Y + posY - regularSize.Y / 2f);
-            if (position.X >= -regularSize.X)
-            {
-                _drawHelper.DrawIcon(action.ActionId, position, regularSize, 1, drawList);
-            }
-            ImGui.Text($"Action executed: {action.ActionName}, execution time: {action.Time}");
+            ImGui.Text(action.ToMacroAction(actionsList[^1] == action));
         }
-    }
-    
-    private float GetPositionX(double timeDiff, int maxTime, float width)
-    {
-        return width - ((float)timeDiff * width / maxTime);
+
+        ImGui.EndChild();
+        ImGui.EndChild();
     }
 
-    private void DrawGrid()
+    private void GenerateMacroControls(IReadOnlyList<CraftAction> actionsList)
     {
-        // if (!_configuration.ShowRecordingGrid) { return; }
-
-        var drawList = ImGui.GetWindowDrawList();
-        Vector2 pos = ImGui.GetWindowPos();
-        var width = ImGui.GetWindowWidth();
-        var height = ImGui.GetWindowHeight();
-
-        var now = ImGui.GetTime();
-        var maxActionCount = _configuration.CraftingActionsLimit;
-
-        var lineColor = ImGui.ColorConvertFloat4ToU32(_configuration.GridLineColor);
-        // uint subdivisionLineColor = ImGui.ColorConvertFloat4ToU32(Settings.GridSubdivisionLineColor);
-
-        for (var i = 0; i < maxActionCount; i++)
+        var macroSlices = actionsList.Count / 16;
+        ImGui.SameLine();
+        ImGui.BeginChild("macro_controls", new Vector2(0, 80) * _scale, true, ImGuiWindowFlags.NoScrollbar);
+        ImGui.Text("Export Controls");
+        ImGui.Separator();
+        ImGui.PushFont(UiBuilder.IconFont);
+        if (macroSlices > 0 || !actionsList.Any()) ImGui.BeginDisabled();
+        if (ImGui.Button($"{(char)FontAwesomeIcon.FileExport}##exportRec", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
         {
-            var step = width / maxActionCount;
-            var x = step * i;
-
-            drawList.AddLine(new Vector2(pos.X + x, pos.Y), new Vector2(pos.X + x, pos.Y + height), lineColor, _configuration.GridLineWidth);
+            ClipboardHelper.TransferToClipboard(actionsList);
         }
+        ImGui.PopFont();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip($"Export macro");
+
+        if (macroSlices > 0 || !actionsList.Any()) ImGui.EndDisabled();
+        if (macroSlices > 0)
+        {
+            for (var slice = 0; slice <= macroSlices; slice++)
+            {
+                ImGui.SameLine();
+                if (ImGui.Button($"{slice + 1}##exportRec{slice + 1}", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
+                {
+                    ClipboardHelper.TransferToClipboard(actionsList, slice);
+                }
+
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip($"Export macro {slice + 1}");
+            }
+        }
+
+        ImGui.EndChild();
     }
 }
