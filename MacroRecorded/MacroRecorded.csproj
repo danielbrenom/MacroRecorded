@@ -15,9 +15,9 @@
         <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-        <AssemblyVersion>1.0.0.1</AssemblyVersion>
-        <FileVersion>1.0.0.1</FileVersion>
-        <PackageVersion>1.0.0.1</PackageVersion>
+        <AssemblyVersion>1.0.0.2</AssemblyVersion>
+        <FileVersion>1.0.0.2</FileVersion>
+        <PackageVersion>1.0.0.2</PackageVersion>
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     </PropertyGroup>
     <!--    Dalamud imports-->
