@@ -71,7 +71,15 @@ public class PluginUi : Window
             ImGui.SetTooltip("Clear recording");
 
         if (!actionsList.Any() || _configuration.RecordStarted) ImGui.EndDisabled();
-
+        
+        ImGui.SameLine();
+        
+        ImGui.PushFont(UiBuilder.IconFont);
+        if(ImGui.Button($"{(char)FontAwesomeIcon.Info}##info", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f))){}
+        ImGui.PopFont();
+        if(ImGui.IsItemHovered())
+            ImGui.SetTooltip("Start crafting and hit Play to record your actions. \nPress Stop to stop and be able to clear");
+        
         ImGui.EndGroup();
 
         if (_configuration.RecordStarted)
