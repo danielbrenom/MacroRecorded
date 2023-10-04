@@ -6,6 +6,7 @@ using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
 using Dalamud.Logging;
+using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
 using Lumina.Excel;
@@ -17,11 +18,11 @@ namespace MacroRecorded.Logic;
 
 public class ActionWatcher : IDisposable
 {
-    private readonly Framework _framework;
+    private readonly IFramework _framework;
 
     // private readonly SigScanner _sigScanner;
-    private readonly ClientState _clientState;
-    private readonly Condition _condition;
+    private readonly IClientState _clientState;
+    private readonly ICondition _condition;
     private readonly Configuration _configuration;
 
     // <ActionManager*, global::FFXIVClientStructs.FFXIV.Client.Game.ActionType, uint, long, uint, uint, uint, void*, bool>
@@ -36,9 +37,12 @@ public class ActionWatcher : IDisposable
     private readonly ExcelSheet<LuminaCraftAction> _craftSheet;
     private const int MaxActionCount = 50;
     private List<CraftAction> _craftActions = new(MaxActionCount);
+
+    public bool CanStartRecording { get; set; }
     public IReadOnlyList<CraftAction> CraftActions => _craftActions.AsReadOnly();
 
-    public ActionWatcher(DataManager dataManager, Framework framework, SigScanner sigScanner, ClientState clientState, Configuration configuration, Condition condition)
+    public ActionWatcher(IDataManager dataManager, IFramework framework, IGameInteropProvider interopProvider, ISigScanner sigScanner,
+        IClientState clientState, Configuration configuration, ICondition condition, IPluginLog pluginLog)
     {
         _actionSheet = dataManager.GetExcelSheet<LuminaAction>();
         _craftSheet = dataManager.GetExcelSheet<LuminaCraftAction>();
@@ -50,19 +54,20 @@ public class ActionWatcher : IDisposable
         {
             unsafe
             {
-                _onUseActionHook = Hook<OnUseActionDelegate>.FromAddress(sigScanner.ScanText(ActionManager.Addresses.UseAction.String), OnUseAction);
+                _onUseActionHook = interopProvider.HookFromAddress<OnUseActionDelegate>(sigScanner.ScanText(ActionManager.Addresses.UseAction.String), OnUseAction);
             }
         }
         catch (Exception e)
         {
-            PluginLog.Error($"Error initializing: {e.Message}");
+            pluginLog.Error($"Error initializing: {e.Message}");
         }
 
         _framework.Update += Update;
     }
 
-    private void Update(Framework framework)
+    private void Update(IFramework framework)
     {
+        CanStartRecording = _condition[ConditionFlag.Crafting];
         //The hook should be enabled only when the user is crafting, otherwise it'll interfere with users actions
         if (IsCrafting && !_condition[ConditionFlag.Crafting])
         {
@@ -70,6 +75,7 @@ public class ActionWatcher : IDisposable
             IsCrafting = false;
             _onUseActionHook.Disable();
         }
+
         if (_condition[ConditionFlag.Crafting] && _configuration.RecordStarted)
         {
             //Crafting started
@@ -87,7 +93,7 @@ public class ActionWatcher : IDisposable
     {
         _onUseActionHook?.Original(manager, actionType, actionId, targetId, a4, a5, a6, a7);
         var player = _clientState.LocalPlayer;
-        if (player == null || !IsCrafting || !_configuration.RecordStarted)
+        if (player is null || !IsCrafting || !_configuration.RecordStarted)
             return;
         AddSpellAction(actionId);
         AddCraftAction(actionId);

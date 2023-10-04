@@ -48,11 +48,11 @@ public class PluginUi : Window
         ImGui.BeginGroup();
         ImGui.PushFont(UiBuilder.IconFont);
 
-        if (_configuration.RecordStarted) ImGui.BeginDisabled();
+        if (_configuration.RecordStarted || !_actionWatcher.CanStartRecording) ImGui.BeginDisabled();
         if (ImGui.Button($"{(char)FontAwesomeIcon.Play}##startRec", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
             _configuration.RecordStarted = true;
 
-        if (_configuration.RecordStarted) ImGui.EndDisabled();
+        if (_configuration.RecordStarted || !_actionWatcher.CanStartRecording) ImGui.EndDisabled();
 
         ImGui.SameLine();
 
@@ -82,10 +82,11 @@ public class PluginUi : Window
         
         ImGui.EndGroup();
 
-        if (_configuration.RecordStarted)
-        {
+        if (_configuration.RecordStarted) 
             ImGui.Text("Recording...");
-        }
+
+        if (!_actionWatcher.CanStartRecording) 
+            ImGui.Text("Not in Crafting");
 
         ImGui.EndChild();
 

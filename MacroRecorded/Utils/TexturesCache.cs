@@ -6,9 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Dalamud.Data;
+using Dalamud.Interface.Internal;
 using Dalamud.Plugin;
-using ImGuiScene;
+using Dalamud.Plugin.Services;
 using Lumina.Excel;
 
 namespace MacroRecorded.Utils;
@@ -17,24 +17,24 @@ public class TexturesCache : IDisposable
 {
     private readonly DalamudPluginInterface _pluginInterface;
     private readonly TextureLoader _textureLoader;
-    private readonly DataManager _dataManager;
-    private Dictionary<uint, TextureWrap> _cache = new();
+    private readonly IDataManager _dataManager;
+    private Dictionary<uint, IDalamudTextureWrap> _cache = new();
 
-    public TexturesCache(DalamudPluginInterface pluginInterface, DataManager dataManager, TextureLoader textureLoader)
+    public TexturesCache(DalamudPluginInterface pluginInterface, IDataManager dataManager, TextureLoader textureLoader)
     {
         _pluginInterface = pluginInterface;
         _dataManager = dataManager;
         _textureLoader = textureLoader;
     }
 
-    public TextureWrap GetTexture<T>(uint rowId, bool highQuality = false, uint stackCount = 0) where T : ExcelRow
+    public IDalamudTextureWrap GetTexture<T>(uint rowId, bool highQuality = false, uint stackCount = 0) where T : ExcelRow
     {
         var sheet = _dataManager.GetExcelSheet<T>();
 
         return sheet == null ? null : GetTexture<T>(sheet.GetRow(rowId), highQuality, stackCount);
     }
 
-    public TextureWrap GetTexture<T>(dynamic row, bool highQuality = false, uint stackCount = 0) where T : ExcelRow
+    public IDalamudTextureWrap GetTexture<T>(dynamic row, bool highQuality = false, uint stackCount = 0) where T : ExcelRow
     {
         if (row == null)
         {
@@ -45,7 +45,7 @@ public class TexturesCache : IDisposable
         return GetTextureFromIconId(iconId, highQuality, stackCount);
     }
 
-    public TextureWrap GetTextureFromIconId(uint iconId, bool highQuality = false, uint stackCount = 0)
+    public IDalamudTextureWrap GetTextureFromIconId(uint iconId, bool highQuality = false, uint stackCount = 0)
     {
         if (_cache.TryGetValue(iconId + stackCount, out var texture))
         {
@@ -63,7 +63,7 @@ public class TexturesCache : IDisposable
         return newTexture;
     }
 
-    private TextureWrap LoadTexture(uint id, bool highQuality)
+    private IDalamudTextureWrap LoadTexture(uint id, bool highQuality)
     {
         var hqText = highQuality ? "hq/" : "";
         var path = $"ui/icon/{id / 1000 * 1000:000000}/{hqText}{id:000000}_hr1.tex";

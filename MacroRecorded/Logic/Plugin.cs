@@ -7,6 +7,7 @@ using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
 using Dalamud.IoC;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using MacroRecorded.Services;
 using MacroRecorded.Utils;
 using MacroRecorded.Windows;
@@ -18,19 +19,13 @@ public class Plugin : IDalamudPlugin
     public string Name => PluginConstants.CommandName;
 
     private DalamudPluginInterface PluginInterface { get; init; }
-    private CommandManager CommandManager { get; init; }
+    private ICommandManager CommandManager { get; init; }
     private readonly PluginServiceFactory _pluginServiceFactory;
     private readonly WindowService _windowService;
 
-    public Plugin(
-        [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-        [RequiredVersion("1.0")] CommandManager commandManager,
-        [RequiredVersion("1.0")] DataManager dataManager,
-        [RequiredVersion("1.0")] GameGui gameGui,
-        [RequiredVersion("1.0")] Framework framework,
-        [RequiredVersion("1.0")] SigScanner sigScanner,
-        [RequiredVersion("1.0")] ClientState clientState,
-        [RequiredVersion("1.0")] Condition condition)
+    public Plugin(DalamudPluginInterface pluginInterface, ICommandManager commandManager, IDataManager dataManager,
+        IGameGui gameGui, IFramework framework, ISigScanner sigScanner, IClientState clientState,
+        ICondition condition, IGameInteropProvider interopProvider, IPluginLog pluginLog)
     {
         PluginInterface = pluginInterface;
         CommandManager = commandManager;
@@ -45,7 +40,9 @@ public class Plugin : IDalamudPlugin
                                                           .RegisterService(sigScanner)
                                                           .RegisterService(clientState)
                                                           .RegisterService(condition)
-                                                          .RegisterService(pluginInterface.UiBuilder);
+                                                          .RegisterService(pluginInterface.UiBuilder)
+                                                          .RegisterService(interopProvider)
+                                                          .RegisterService(pluginLog);
         _pluginServiceFactory.RegisterService(_pluginServiceFactory);
         PluginModule.Register(_pluginServiceFactory);
 
@@ -63,6 +60,7 @@ public class Plugin : IDalamudPlugin
         });
 
         PluginInterface.UiBuilder.Draw += DrawUi;
+        PluginInterface.UiBuilder.OpenMainUi += _windowService.GetWindow(WindowConstants.MainWindowName).Toggle;
         // PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUi;
     }
 

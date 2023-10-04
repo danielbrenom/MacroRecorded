@@ -15,6 +15,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Dalamud.Data;
 using Dalamud.Interface;
+using Dalamud.Interface.Internal;
+using Dalamud.Plugin.Services;
 using static Lumina.Data.Files.TexFile;
 
 namespace MacroRecorded.Utils;
@@ -22,15 +24,17 @@ namespace MacroRecorded.Utils;
 public class TextureLoader
 {
     private readonly UiBuilder _uiBuilder;
-    private readonly DataManager _dataManager;
+    private readonly IDataManager _dataManager;
+    private readonly IPluginLog _pluginLog;
 
-    public TextureLoader(UiBuilder uiBuilder, DataManager dataManager)
+    public TextureLoader(UiBuilder uiBuilder, IDataManager dataManager, IPluginLog pluginLog)
     {
         _uiBuilder = uiBuilder;
         _dataManager = dataManager;
+        _pluginLog = pluginLog;
     }
 
-    public TextureWrap LoadTexture(string path, bool manualLoad)
+    public IDalamudTextureWrap LoadTexture(string path, bool manualLoad)
     {
         if (manualLoad) return ManuallyLoadTexture(path);
         try
@@ -49,7 +53,7 @@ public class TextureLoader
         return ManuallyLoadTexture(path);
     }
 
-    private unsafe TextureWrap ManuallyLoadTexture(string path)
+    private unsafe IDalamudTextureWrap ManuallyLoadTexture(string path)
     {
         try
         {
@@ -71,7 +75,7 @@ public class TextureLoader
         }
         catch
         {
-            PluginLog.Error("Error loading texture: " + path);
+            _pluginLog.Error("Error loading texture: " + path);
             return null;
         }
     }
