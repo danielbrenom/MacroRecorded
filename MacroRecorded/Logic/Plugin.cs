@@ -5,6 +5,7 @@ using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
+using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -30,7 +31,8 @@ public class Plugin : IDalamudPlugin
         PluginInterface = pluginInterface;
         CommandManager = commandManager;
         var configuration = (Configuration)PluginInterface.GetPluginConfig() ?? new Configuration();
-        _windowService = new WindowService(new(WindowConstants.WindowSystemNamespace));
+        configuration.Initialize(PluginInterface);
+        _windowService = new WindowService(new WindowSystem(WindowConstants.WindowSystemNamespace));
         _pluginServiceFactory = new PluginServiceFactory().RegisterService(pluginInterface)
                                                           .RegisterService(_windowService)
                                                           .RegisterService(configuration)
@@ -46,9 +48,11 @@ public class Plugin : IDalamudPlugin
         _pluginServiceFactory.RegisterService(_pluginServiceFactory);
         PluginModule.Register(_pluginServiceFactory);
 
-        var mainWindow = new PluginUi(_pluginServiceFactory.Create<ActionWatcher>(),
-                                      _pluginServiceFactory.Create<Configuration>());
-        _windowService.RegisterWindow(mainWindow, WindowConstants.MainWindowName);
+        _windowService.RegisterWindow(new PluginUi(_pluginServiceFactory.Create<ActionWatcher>(),
+                                                   _pluginServiceFactory.Create<Configuration>(),
+                                                   _windowService),
+                                      WindowConstants.MainWindowName);
+        _windowService.RegisterWindow(new ConfigurationUi(configuration), WindowConstants.ConfigWindowName);
 
         CommandManager.AddHandler(PluginConstants.CommandSlash, new CommandInfo(OnCommand)
         {
@@ -61,7 +65,7 @@ public class Plugin : IDalamudPlugin
 
         PluginInterface.UiBuilder.Draw += DrawUi;
         PluginInterface.UiBuilder.OpenMainUi += _windowService.GetWindow(WindowConstants.MainWindowName).Toggle;
-        // PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUi;
+        PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUi;
     }
 
     private void OnCommand(string command, string args)
@@ -76,6 +80,12 @@ public class Plugin : IDalamudPlugin
         _windowService.Draw();
     }
 
+    private void DrawConfigUi()
+    {
+        var pluginWindow = _windowService.GetWindow(WindowConstants.ConfigWindowName);
+        if (pluginWindow is not ConfigurationUi window) return;
+        window.IsOpen = true;
+    }
 
     public void Dispose()
     {

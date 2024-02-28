@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using MacroRecorded.Data;
 using ImGuiNET;
+using MacroRecorded.Logic;
 
 namespace MacroRecorded.Utils;
 
@@ -17,19 +18,19 @@ public static class ClipboardHelper
         { 45, 50 }
     };
 
-    public static void TransferToClipboard(IReadOnlyList<CraftAction> actions)
+    public static void TransferToClipboard(IReadOnlyList<CraftAction> actions, (int,int) configuredWait)
     {
         if (!actions.Any()) return;
         var builder = new StringBuilder();
         foreach (var action in actions)
         {
-            builder.AppendLine(action.ToMacroAction(actions[^1] == action));
+            builder.AppendLine(action.ToMacroText(actions[^1] == action, configuredWait));
         }
 
         ImGui.SetClipboardText(builder.ToString());
     }
 
-    public static void TransferToClipboard(IReadOnlyList<CraftAction> actions, int slice)
+    public static void TransferToClipboard(IReadOnlyList<CraftAction> actions, int slice, (int,int) configuredWait)
     {
         var range = SliceRanges.ElementAt(slice);
         var sliceActions = new List<CraftAction>();
@@ -39,6 +40,6 @@ public static class ClipboardHelper
             sliceActions.Add(action);
         }
 
-        TransferToClipboard(sliceActions);
+        TransferToClipboard(sliceActions, configuredWait);
     }
 }

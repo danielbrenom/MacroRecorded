@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Dalamud.Data;
 using Dalamud.Game;
-using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
-using Dalamud.Logging;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
@@ -95,11 +92,11 @@ public class ActionWatcher : IDisposable
         var player = _clientState.LocalPlayer;
         if (player is null || !IsCrafting || !_configuration.RecordStarted)
             return;
-        AddSpellAction(actionId);
-        AddCraftAction(actionId);
+        AddSpellAction(actionId, actionType);
+        AddCraftAction(actionId, actionType);
     }
 
-    private void AddSpellAction(uint actionId)
+    private void AddSpellAction(uint actionId, ActionType actionType)
     {
         var action = _actionSheet?.GetRow(actionId);
         if (action == null) return;
@@ -110,11 +107,11 @@ public class ActionWatcher : IDisposable
         }
 
         var now = ImGui.GetTime();
-        var item = new CraftAction(action.Name, actionId, action.Icon, now);
+        var item = new CraftAction(action.Name, actionId, action.Icon, now, actionType);
         _craftActions.Add(item);
     }
 
-    private void AddCraftAction(uint actionId)
+    private void AddCraftAction(uint actionId, ActionType actionType)
     {
         var action = _craftSheet?.GetRow(actionId);
         if (action == null) return;
@@ -125,7 +122,7 @@ public class ActionWatcher : IDisposable
         }
 
         var now = ImGui.GetTime();
-        var item = new CraftAction(action.Name, actionId, action.Icon, now);
+        var item = new CraftAction(action.Name, actionId, action.Icon, now, actionType);
         _craftActions.Add(item);
     }
 

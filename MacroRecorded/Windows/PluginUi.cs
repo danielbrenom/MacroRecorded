@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
-using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
 using MacroRecorded.Data;
 using MacroRecorded.Logic;
+using MacroRecorded.Services;
 using MacroRecorded.Utils;
 
 namespace MacroRecorded.Windows;
@@ -14,16 +15,16 @@ public class PluginUi : Window
 {
     private readonly ActionWatcher _actionWatcher;
     private readonly Configuration _configuration;
-    private ImGuiWindowFlags _flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
-    private readonly float _scale;
+    private readonly WindowService _windowService;
+    private const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
+    private float _scale;
     private Vector2 _itemTextSize;
 
-    public PluginUi(ActionWatcher actionWatcher, Configuration configuration) : base(WindowConstants.MainWindowName)
+    public PluginUi(ActionWatcher actionWatcher, Configuration configuration, WindowService windowService) : base(WindowConstants.MainWindowName, WindowFlags)
     {
-        Flags = _flags;
         _actionWatcher = actionWatcher;
         _configuration = configuration;
-
+        _windowService = windowService;
         _scale = ImGui.GetIO().FontGlobalScale;
         var sizeAnchor = new Vector2(350, 300);
         SizeConstraints = new WindowSizeConstraints
@@ -36,12 +37,13 @@ public class PluginUi : Window
 
     public override void Draw()
     {
+        _scale = ImGui.GetIO().FontGlobalScale;
         _itemTextSize = ImGui.CalcTextSize(string.Empty);
         var actionsList = _actionWatcher.CraftActions;
 
         #region Recorder Controls
 
-        ImGui.BeginChild("recording_controls", new Vector2(150, 80) * _scale, true, ImGuiWindowFlags.NoScrollbar);
+        ImGui.BeginChild("recording_controls", new Vector2(180, 80) * _scale, true, ImGuiWindowFlags.NoScrollbar);
         ImGui.SetNextItemWidth(ImGui.GetIO().FontGlobalScale - ImGui.GetStyle().ItemSpacing.X);
         ImGui.Text("Recorder Controls");
         ImGui.Separator();
@@ -80,6 +82,17 @@ public class PluginUi : Window
         if(ImGui.IsItemHovered())
             ImGui.SetTooltip("Start crafting and hit Play to record your actions. \nPress Stop to stop and be able to clear");
         
+        ImGui.SameLine();
+        
+        ImGui.PushFont(UiBuilder.IconFont);
+        if (ImGui.Button($"{(char)FontAwesomeIcon.Cog}##config", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
+        {
+            var pluginWindow = _windowService.GetWindow(WindowConstants.ConfigWindowName);
+            if (pluginWindow is not ConfigurationUi window) return;
+            window.IsOpen = true;
+        }
+        ImGui.PopFont();
+        
         ImGui.EndGroup();
 
         if (_configuration.RecordStarted) 
@@ -104,7 +117,7 @@ public class PluginUi : Window
         ImGui.BeginChild("macro_recoding_text", new Vector2(0, 0), false);
         foreach (var action in actionsList)
         {
-            ImGui.Text(action.ToMacroAction(actionsList[^1] == action));
+            ImGui.Text(action.ToMacroText(actionsList[^1] == action, (_configuration.CraftActionWait, _configuration.BuffActionWait)));
         }
 
         ImGui.EndChild();
@@ -122,7 +135,7 @@ public class PluginUi : Window
         if (macroSlices > 0 || !actionsList.Any()) ImGui.BeginDisabled();
         if (ImGui.Button($"{(char)FontAwesomeIcon.FileExport}##exportRec", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
         {
-            ClipboardHelper.TransferToClipboard(actionsList);
+            ClipboardHelper.TransferToClipboard(actionsList, (_configuration.CraftActionWait, _configuration.BuffActionWait));
         }
         ImGui.PopFont();
         if (ImGui.IsItemHovered())
@@ -136,7 +149,7 @@ public class PluginUi : Window
                 ImGui.SameLine();
                 if (ImGui.Button($"{slice + 1}##exportRec{slice + 1}", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
                 {
-                    ClipboardHelper.TransferToClipboard(actionsList, slice);
+                    ClipboardHelper.TransferToClipboard(actionsList, slice, (_configuration.CraftActionWait, _configuration.BuffActionWait));
                 }
 
                 if (ImGui.IsItemHovered())
