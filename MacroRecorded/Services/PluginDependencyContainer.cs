@@ -5,41 +5,49 @@ using System.Reflection;
 
 namespace MacroRecorded.Services;
 
-public class PluginServiceFactory
+public class PluginDependencyContainer
 {
-    private readonly Dictionary<Type, object> _services;
+    private readonly List<Type> _registeredTypes = [];
+    private readonly Dictionary<Type, object> _services = new();
 
-    public PluginServiceFactory()
+    public PluginDependencyContainer Register<T>() where T : class
     {
-        _services = new Dictionary<Type, object>();
-    }
-
-    public PluginServiceFactory RegisterService<T>() where T : class
-    {
-        _services.Add(typeof(T), Create<T>());
+        if (!_registeredTypes.Contains(typeof(T)))
+            _registeredTypes.Add(typeof(T));
         return this;
     }
 
-    public PluginServiceFactory RegisterService<T>(T instance) where T : class
+    public PluginDependencyContainer Register<T>(T instance) where T : class
     {
-        _services.Add(typeof(T), instance);
+        _registeredTypes.Add(typeof(T));
+        _services.TryAdd(typeof(T), instance);
         return this;
     }
 
-    public T Create<T>() where T : class
+    public void Resolve()
+    {
+        foreach (var registeredType in _registeredTypes)
+        {
+            _services.TryAdd(registeredType, CreateDependency(registeredType));
+        }
+    }
+
+    public T Retrieve<T>() where T : class
     {
         if (_services.TryGetValue(typeof(T), out var service))
-            return service as T;
-        return Create(typeof(T)) as T;
+            return (T)service;
+
+        return (T)CreateDependency(typeof(T));
     }
 
-    private object Create(Type type)
+    private object CreateDependency(Type type)
     {
         if (_services.TryGetValue(type, out var service))
             return service;
+
         var defaultConstructor = type.GetConstructors()[0];
         var defaultParams = defaultConstructor.GetParameters();
-        var parameters = defaultParams.Select(param => Create(param.ParameterType)).ToArray();
+        var parameters = defaultParams.Select(param => CreateDependency(param.ParameterType)).ToArray();
         return defaultConstructor.Invoke(parameters);
     }
 
@@ -53,8 +61,7 @@ public class PluginServiceFactory
                 if (disposeMethod != null && type.GetInterfaceMap(typeof(IDisposable)).TargetMethods.Contains(disposeMethod))
                     ((IDisposable)service).Dispose();
             }
-            catch (ArgumentException){}
-            catch (AmbiguousMatchException)
+            catch (ArgumentException)
             {
                 //Non disposable services should not interfere
             }

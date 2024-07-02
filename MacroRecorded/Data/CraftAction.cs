@@ -1,6 +1,4 @@
-﻿using System;
-using FFXIVClientStructs.FFXIV.Client.Game;
-using MacroRecorded.Utils;
+﻿using FFXIVClientStructs.FFXIV.Client.Game;
 
 namespace MacroRecorded.Data;
 

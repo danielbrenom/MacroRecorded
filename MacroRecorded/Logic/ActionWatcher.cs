@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
@@ -16,18 +15,10 @@ namespace MacroRecorded.Logic;
 public class ActionWatcher : IDisposable
 {
     private readonly IFramework _framework;
-
-    // private readonly SigScanner _sigScanner;
     private readonly IClientState _clientState;
     private readonly ICondition _condition;
     private readonly Configuration _configuration;
-
-    // <ActionManager*, global::FFXIVClientStructs.FFXIV.Client.Game.ActionType, uint, long, uint, uint, uint, void*, bool>
-    // By using this, the HookDelegate need the ActionManager
-    // public partial bool UseAction(ActionType actionType, uint actionID, long targetID = 0xE000_0000, uint a4 = 0, uint a5 = 0, uint a6 = 0, void* a7 = null);
-    private unsafe delegate void OnUseActionDelegate(ActionManager* manager, ActionType actionType, uint actionId, long targetId = 0xE000_0000, uint a4 = 0, uint a5 = 0, uint a6 = 0, void* a7 = null);
-
-    private readonly Hook<OnUseActionDelegate> _onUseActionHook;
+    private readonly Hook<ActionManager.Delegates.UseAction> _onUseActionHook;
 
     private bool IsCrafting;
     private readonly ExcelSheet<LuminaAction> _actionSheet;
@@ -38,8 +29,7 @@ public class ActionWatcher : IDisposable
     public bool CanStartRecording { get; set; }
     public IReadOnlyList<CraftAction> CraftActions => _craftActions.AsReadOnly();
 
-    public ActionWatcher(IDataManager dataManager, IFramework framework, IGameInteropProvider interopProvider, ISigScanner sigScanner,
-        IClientState clientState, Configuration configuration, ICondition condition, IPluginLog pluginLog)
+    public ActionWatcher(IDataManager dataManager, IFramework framework, IGameInteropProvider interopProvider, IClientState clientState, Configuration configuration, ICondition condition, IPluginLog pluginLog)
     {
         _actionSheet = dataManager.GetExcelSheet<LuminaAction>();
         _craftSheet = dataManager.GetExcelSheet<LuminaCraftAction>();
@@ -51,7 +41,7 @@ public class ActionWatcher : IDisposable
         {
             unsafe
             {
-                _onUseActionHook = interopProvider.HookFromAddress<OnUseActionDelegate>(sigScanner.ScanText(ActionManager.Addresses.UseAction.String), OnUseAction);
+                _onUseActionHook = interopProvider.HookFromAddress<ActionManager.Delegates.UseAction>(ActionManager.MemberFunctionPointers.UseAction, OnUseAction);
             }
         }
         catch (Exception e)
@@ -86,14 +76,15 @@ public class ActionWatcher : IDisposable
         _craftActions = new List<CraftAction>();
     }
 
-    private unsafe void OnUseAction(ActionManager* manager, ActionType actionType, uint actionId, long targetId, uint a4, uint a5, uint a6, void* a7)
+    private unsafe bool OnUseAction(ActionManager* manager, ActionType actionType, uint actionId, ulong targetId, uint extraParam, ActionManager.UseActionMode mode, uint comboRouteId, bool* outOptAreaTargeted)
     {
-        _onUseActionHook?.Original(manager, actionType, actionId, targetId, a4, a5, a6, a7);
+        var result = _onUseActionHook?.Original(manager, actionType, actionId, targetId, extraParam, mode, comboRouteId, outOptAreaTargeted);
         var player = _clientState.LocalPlayer;
         if (player is null || !IsCrafting || !_configuration.RecordStarted)
-            return;
+            return result ?? true;
         AddSpellAction(actionId, actionType);
         AddCraftAction(actionId, actionType);
+        return result ?? true;
     }
 
     private void AddSpellAction(uint actionId, ActionType actionType)

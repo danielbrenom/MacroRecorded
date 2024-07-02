@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text;
 using MacroRecorded.Data;
 using ImGuiNET;
-using MacroRecorded.Logic;
 
 namespace MacroRecorded.Utils;
 

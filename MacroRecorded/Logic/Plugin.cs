@@ -1,12 +1,6 @@
 ﻿using System;
-using Dalamud.Data;
-using Dalamud.Game;
-using Dalamud.Game.ClientState;
-using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
-using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
-using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using MacroRecorded.Services;
@@ -19,13 +13,13 @@ public class Plugin : IDalamudPlugin
 {
     public string Name => PluginConstants.CommandName;
 
-    private DalamudPluginInterface PluginInterface { get; init; }
+    private IDalamudPluginInterface PluginInterface { get; init; }
     private ICommandManager CommandManager { get; init; }
-    private readonly PluginServiceFactory _pluginServiceFactory;
+    private readonly PluginDependencyContainer _pluginDependencyContainer;
     private readonly WindowService _windowService;
 
-    public Plugin(DalamudPluginInterface pluginInterface, ICommandManager commandManager, IDataManager dataManager,
-        IGameGui gameGui, IFramework framework, ISigScanner sigScanner, IClientState clientState,
+    public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commandManager, IDataManager dataManager,
+        IGameGui gameGui, IFramework framework, IClientState clientState,
         ICondition condition, IGameInteropProvider interopProvider, IPluginLog pluginLog)
     {
         PluginInterface = pluginInterface;
@@ -33,26 +27,24 @@ public class Plugin : IDalamudPlugin
         var configuration = (Configuration)PluginInterface.GetPluginConfig() ?? new Configuration();
         configuration.Initialize(PluginInterface);
         _windowService = new WindowService(new WindowSystem(WindowConstants.WindowSystemNamespace));
-        _pluginServiceFactory = new PluginServiceFactory().RegisterService(pluginInterface)
-                                                          .RegisterService(_windowService)
-                                                          .RegisterService(configuration)
-                                                          .RegisterService(dataManager)
-                                                          .RegisterService(gameGui)
-                                                          .RegisterService(framework)
-                                                          .RegisterService(sigScanner)
-                                                          .RegisterService(clientState)
-                                                          .RegisterService(condition)
-                                                          .RegisterService(pluginInterface.UiBuilder)
-                                                          .RegisterService(interopProvider)
-                                                          .RegisterService(pluginLog);
-        _pluginServiceFactory.RegisterService(_pluginServiceFactory);
-        PluginModule.Register(_pluginServiceFactory);
+        _pluginDependencyContainer = new PluginDependencyContainer().Register(pluginInterface)
+                                                                    .Register(_windowService)
+                                                                    .Register(configuration)
+                                                                    .Register(dataManager)
+                                                                    .Register(gameGui)
+                                                                    .Register(framework)
+                                                                    .Register(clientState)
+                                                                    .Register(condition)
+                                                                    .Register(pluginInterface.UiBuilder)
+                                                                    .Register(interopProvider)
+                                                                    .Register(pluginLog)
+                                                                    .Register<ConfigurationUi>()
+                                                                    .Register<PluginUi>();
+        PluginModule.Register(_pluginDependencyContainer);
+        _pluginDependencyContainer.Resolve();
 
-        _windowService.RegisterWindow(new PluginUi(_pluginServiceFactory.Create<ActionWatcher>(),
-                                                   _pluginServiceFactory.Create<Configuration>(),
-                                                   _windowService),
-                                      WindowConstants.MainWindowName);
-        _windowService.RegisterWindow(new ConfigurationUi(configuration), WindowConstants.ConfigWindowName);
+        _windowService.RegisterWindow(_pluginDependencyContainer.Retrieve<PluginUi>(), WindowConstants.MainWindowName);
+        _windowService.RegisterWindow(_pluginDependencyContainer.Retrieve<ConfigurationUi>(), WindowConstants.ConfigWindowName);
 
         CommandManager.AddHandler(PluginConstants.CommandSlash, new CommandInfo(OnCommand)
         {
@@ -89,8 +81,8 @@ public class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
-        PluginInterface?.SavePluginConfig(_pluginServiceFactory.Create<Configuration>());
-        _pluginServiceFactory.Dispose();
+        PluginInterface?.SavePluginConfig(_pluginDependencyContainer.Retrieve<Configuration>());
+        _pluginDependencyContainer.Dispose();
         CommandManager.RemoveHandler(PluginConstants.CommandSlash);
         CommandManager.RemoveHandler(PluginConstants.ShortCommandSlash);
         _windowService.Unregister();

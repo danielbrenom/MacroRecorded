@@ -13,13 +13,11 @@ public class GridRecorder : Window
 {
     private readonly ActionWatcher _actionWatcher;
     private readonly Configuration _configuration;
-    private readonly DrawHelper _drawHelper;
 
-    public GridRecorder(ActionWatcher actionWatcher, Configuration configuration, DrawHelper drawHelper) : base(WindowConstants.MainWindowName)
+    public GridRecorder(ActionWatcher actionWatcher, Configuration configuration) : base(WindowConstants.MainWindowName)
     {
         _actionWatcher = actionWatcher;
         _configuration = configuration;
-        _drawHelper = drawHelper;
     }
 
     public override void Draw()
@@ -48,7 +46,9 @@ public class GridRecorder : Window
             var position = new Vector2(pos.X + posX - regularSize.X / 2f, pos.Y + posY - regularSize.Y / 2f);
             if (position.X >= -regularSize.X)
             {
-                _drawHelper.DrawIcon(action.ActionId, position, regularSize, 1, drawList);
+                //TODO: redo this if needed
+                //Use the new IDalamudTextureWrapper, no need for cache anymore
+                //_drawHelper.DrawIcon(action.ActionId, position, regularSize, 1, drawList);
             }
             ImGui.Text($"Action executed: {action.ActionName}, execution time: {action.Time}");
         }

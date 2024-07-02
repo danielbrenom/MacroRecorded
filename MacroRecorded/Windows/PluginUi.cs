@@ -73,32 +73,38 @@ public class PluginUi : Window
             ImGui.SetTooltip("Clear recording");
 
         if (!actionsList.Any() || _configuration.RecordStarted) ImGui.EndDisabled();
-        
+
         ImGui.SameLine();
-        
+
         ImGui.PushFont(UiBuilder.IconFont);
-        if(ImGui.Button($"{(char)FontAwesomeIcon.Info}##info", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f))){}
+        if (ImGui.Button($"{(char)FontAwesomeIcon.Info}##info", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
+        {
+        }
+
         ImGui.PopFont();
-        if(ImGui.IsItemHovered())
+        if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Start crafting and hit Play to record your actions. \nPress Stop to stop and be able to clear");
-        
+
         ImGui.SameLine();
-        
+
         ImGui.PushFont(UiBuilder.IconFont);
         if (ImGui.Button($"{(char)FontAwesomeIcon.Cog}##config", new Vector2(25 * _scale, _itemTextSize.Y * _scale * 1.5f)))
         {
             var pluginWindow = _windowService.GetWindow(WindowConstants.ConfigWindowName);
-            if (pluginWindow is not ConfigurationUi window) return;
+            if (pluginWindow is not ConfigurationUi window)
+                return;
+
             window.IsOpen = true;
         }
+
         ImGui.PopFont();
-        
+
         ImGui.EndGroup();
 
-        if (_configuration.RecordStarted) 
+        if (_configuration.RecordStarted)
             ImGui.Text("Recording...");
 
-        if (!_actionWatcher.CanStartRecording) 
+        if (!_actionWatcher.CanStartRecording)
             ImGui.Text("Not in Crafting");
 
         ImGui.EndChild();
@@ -137,6 +143,7 @@ public class PluginUi : Window
         {
             ClipboardHelper.TransferToClipboard(actionsList, (_configuration.CraftActionWait, _configuration.BuffActionWait));
         }
+
         ImGui.PopFont();
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip($"Export macro");

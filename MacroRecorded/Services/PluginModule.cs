@@ -1,15 +1,11 @@
 ﻿using MacroRecorded.Logic;
-using MacroRecorded.Utils;
 
 namespace MacroRecorded.Services;
 
 public static class PluginModule
 {
-    public static void Register(PluginServiceFactory container)
+    public static void Register(PluginDependencyContainer container)
     {
-        container.RegisterService<ActionWatcher>()
-                 .RegisterService<TextureLoader>()
-                 .RegisterService<TexturesCache>()
-                 .RegisterService<DrawHelper>();
+        container.Register<ActionWatcher>();
     }
 }
