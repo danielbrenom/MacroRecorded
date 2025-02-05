@@ -7,8 +7,8 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
 using Lumina.Excel;
 using MacroRecorded.Data;
-using LuminaAction = Lumina.Excel.GeneratedSheets.Action;
-using LuminaCraftAction = Lumina.Excel.GeneratedSheets.CraftAction;
+using LuminaAction = Lumina.Excel.Sheets.Action;
+using LuminaCraftAction = Lumina.Excel.Sheets.CraftAction;
 
 namespace MacroRecorded.Logic;
 
@@ -89,7 +89,7 @@ public class ActionWatcher : IDisposable
 
     private void AddSpellAction(uint actionId, ActionType actionType)
     {
-        var action = _actionSheet?.GetRow(actionId);
+        var action = _actionSheet?.GetRowOrDefault(actionId);
         if (action == null) return;
 
         if (_craftActions.Count >= MaxActionCount)
@@ -98,13 +98,13 @@ public class ActionWatcher : IDisposable
         }
 
         var now = ImGui.GetTime();
-        var item = new CraftAction(action.Name, actionId, action.Icon, now, actionType);
+        var item = new CraftAction(action.Value.Name.ExtractText(), actionId, action.Value.Icon, now, actionType);
         _craftActions.Add(item);
     }
 
     private void AddCraftAction(uint actionId, ActionType actionType)
     {
-        var action = _craftSheet?.GetRow(actionId);
+        var action = _craftSheet?.GetRowOrDefault(actionId);
         if (action == null) return;
 
         if (_craftActions.Count >= MaxActionCount)
@@ -113,7 +113,7 @@ public class ActionWatcher : IDisposable
         }
 
         var now = ImGui.GetTime();
-        var item = new CraftAction(action.Name, actionId, action.Icon, now, actionType);
+        var item = new CraftAction(action.Value.Name.ExtractText(), actionId, action.Value.Icon, now, actionType);
         _craftActions.Add(item);
     }
 
