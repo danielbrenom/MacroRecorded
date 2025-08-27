@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
-using ImGuiNET;
 using Lumina.Excel;
 using MacroRecorded.Data;
 using LuminaAction = Lumina.Excel.Sheets.Action;
@@ -19,10 +19,9 @@ public class ActionWatcher : IDisposable
     private readonly ICondition _condition;
     private readonly Configuration _configuration;
     private readonly Hook<ActionManager.Delegates.UseAction> _onUseActionHook;
-
-    private bool IsCrafting;
     private readonly ExcelSheet<LuminaAction> _actionSheet;
     private readonly ExcelSheet<LuminaCraftAction> _craftSheet;
+    private bool _isCrafting;
     private const int MaxActionCount = 50;
     private List<CraftAction> _craftActions = new(MaxActionCount);
 
@@ -56,17 +55,17 @@ public class ActionWatcher : IDisposable
     {
         CanStartRecording = _condition[ConditionFlag.Crafting];
         //The hook should be enabled only when the user is crafting, otherwise it'll interfere with users actions
-        if (IsCrafting && !_condition[ConditionFlag.Crafting])
+        if (_isCrafting && !_condition[ConditionFlag.Crafting])
         {
             //Crafting ended
-            IsCrafting = false;
+            _isCrafting = false;
             _onUseActionHook.Disable();
         }
 
         if (_condition[ConditionFlag.Crafting] && _configuration.RecordStarted)
         {
             //Crafting started
-            IsCrafting = true;
+            _isCrafting = true;
             _onUseActionHook.Enable();
         }
     }
@@ -80,7 +79,7 @@ public class ActionWatcher : IDisposable
     {
         var result = _onUseActionHook?.Original(manager, actionType, actionId, targetId, extraParam, mode, comboRouteId, outOptAreaTargeted);
         var player = _clientState.LocalPlayer;
-        if (player is null || !IsCrafting || !_configuration.RecordStarted)
+        if (player is null || !_isCrafting || !_configuration.RecordStarted)
             return result ?? true;
         AddSpellAction(actionId, actionType);
         AddCraftAction(actionId, actionType);

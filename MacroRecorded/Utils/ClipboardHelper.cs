@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Dalamud.Bindings.ImGui;
 using MacroRecorded.Data;
-using ImGuiNET;
 
 namespace MacroRecorded.Utils;
 
