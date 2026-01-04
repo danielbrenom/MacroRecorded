@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Dalamud.Plugin.Services;
 
 namespace MacroRecorded.Services;
 
@@ -43,8 +44,8 @@ public class PluginDependencyContainer
     {
         if (_services.TryGetValue(type, out var service))
             return service;
-
-        var defaultConstructor = type.GetConstructors()[0];
+        
+        var defaultConstructor = type.GetConstructors().First();
         var defaultParams = defaultConstructor.GetParameters();
         var parameters = defaultParams.Select(param => CreateDependency(param.ParameterType)).ToArray();
         return defaultConstructor.Invoke(parameters);
