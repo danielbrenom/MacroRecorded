@@ -15,7 +15,7 @@ namespace MacroRecorded.Logic;
 public class ActionWatcher : IDisposable
 {
     private readonly IFramework _framework;
-    private readonly IClientState _clientState;
+    private readonly IPlayerState _playerState;
     private readonly ICondition _condition;
     private readonly Configuration _configuration;
     private readonly Hook<ActionManager.Delegates.UseAction> _onUseActionHook;
@@ -25,15 +25,15 @@ public class ActionWatcher : IDisposable
     private const int MaxActionCount = 50;
     private List<CraftAction> _craftActions = new(MaxActionCount);
 
-    public bool CanStartRecording { get; set; }
+    public bool CanStartRecording { get; private set; }
     public IReadOnlyList<CraftAction> CraftActions => _craftActions.AsReadOnly();
 
-    public ActionWatcher(IDataManager dataManager, IFramework framework, IGameInteropProvider interopProvider, IClientState clientState, Configuration configuration, ICondition condition, IPluginLog pluginLog)
+    public ActionWatcher(IDataManager dataManager, IFramework framework, IGameInteropProvider interopProvider, IPlayerState playerState, Configuration configuration, ICondition condition, IPluginLog pluginLog)
     {
         _actionSheet = dataManager.GetExcelSheet<LuminaAction>();
         _craftSheet = dataManager.GetExcelSheet<LuminaCraftAction>();
         _framework = framework;
-        _clientState = clientState;
+        _playerState = playerState;
         _condition = condition;
         _configuration = configuration;
         try
@@ -72,14 +72,13 @@ public class ActionWatcher : IDisposable
 
     public void ResetRecording()
     {
-        _craftActions = new List<CraftAction>();
+        _craftActions = [];
     }
 
     private unsafe bool OnUseAction(ActionManager* manager, ActionType actionType, uint actionId, ulong targetId, uint extraParam, ActionManager.UseActionMode mode, uint comboRouteId, bool* outOptAreaTargeted)
     {
         var result = _onUseActionHook?.Original(manager, actionType, actionId, targetId, extraParam, mode, comboRouteId, outOptAreaTargeted);
-        var player = _clientState.LocalPlayer;
-        if (player is null || !_isCrafting || !_configuration.RecordStarted)
+        if (_playerState is null || !_isCrafting || !_configuration.RecordStarted)
             return result ?? true;
         AddSpellAction(actionId, actionType);
         AddCraftAction(actionId, actionType);

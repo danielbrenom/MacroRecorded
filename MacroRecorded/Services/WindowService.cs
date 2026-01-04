@@ -3,20 +3,13 @@ using Dalamud.Interface.Windowing;
 
 namespace MacroRecorded.Services;
 
-public class WindowService
+public class WindowService(WindowSystem windowSystem)
 {
-    private readonly WindowSystem _windowSystem;
-    private Dictionary<string, Window> RegisteredWindows { get; set; }
-
-    public WindowService(WindowSystem windowSystem)
-    {
-        _windowSystem = windowSystem;
-        RegisteredWindows = new Dictionary<string, Window>();
-    }
+    private Dictionary<string, Window> RegisteredWindows { get; set; } = new();
 
     public void RegisterWindow(Window window, string windowName)
     {
-        _windowSystem.AddWindow(window);
+        windowSystem.AddWindow(window);
         RegisteredWindows.TryAdd(windowName, window);
     }
 
@@ -29,12 +22,12 @@ public class WindowService
 
     public void Draw()
     {
-        _windowSystem.Draw();
+        windowSystem.Draw();
     }
 
     public void Unregister()
     {
         RegisteredWindows = null;
-        _windowSystem.RemoveAllWindows();
+        windowSystem.RemoveAllWindows();
     }
 }
